@@ -4,10 +4,13 @@
     <meta charset="UTF-8" />
     <title>Basic 3D Game</title>
     <style>
-      body { margin: 0; }
-      canvas { display: block; }
-    </style>
-    <style>
+      body {
+        margin: 0;
+        overflow: hidden;
+      }
+      canvas {
+        display: block;
+      }
       #banner-container {
         position: fixed;
         top: 0;
@@ -19,7 +22,6 @@
         align-items: center;
         z-index: 9999;
       }
-
       #banner {
         width: 100%;
         height: 20%;
@@ -31,14 +33,29 @@
         line-height: 1;
         opacity: 1;
         transition: opacity 2s;
-        text-shadow:
-          0px -8px 0px #ff0000, /* Red */
+        text-shadow: 0px -8px 0px #ff0000, /* Red */
           3px -6px 0px #ffa500, /* Orange */
           6px -4px 0px #ffff00, /* Yellow */
           9px -2px 0px #00ff00, /* Green */
           12px 0px 0px #0000ff, /* Blue */
           9px 2px 0px #4b0082, /* Indigo */
           6px 4px 0px #ee82ee; /* Violet */
+      }
+      #point-counter {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        font-size: 24px;
+        color: white;
+      }
+      #box {
+        width: 200px;
+        height: 100px;
+        background-color: white;
+        position: absolute;
+        bottom: 10px;
+        left: 50%;
+        transform: translateX(-50%);
       }
     </style>
   </head>
@@ -151,16 +168,6 @@ const toruses = [];
 setInterval(() => {
   const torus = createTorus();
   toruses.push(torus);
-
-  // Remove the torus when it goes out of the window
-  torus.addEventListener('update', () => {
-    if (torus.position.y < -3) {
-      scene.remove(torus);
-      toruses.splice(toruses.indexOf(torus), 1);
-      points++; // increment the point counter
-      pointCounter.innerText = `Points: ${points}`;
-    }
-  });
 }, 5000);
 
 // Animation loop
@@ -173,18 +180,24 @@ function animate() {
     torus.rotation.x += 0.01;
     torus.rotation.y += 0.01;
 
-    // Check if torus has reached the bottom of the screen and hasn't already scored a point
-    if (torus.position.y < -3 && !torus.hasScored) {
+    // Check if torus has passed through the box
+    if (!torus.hasScored && torus.position.x >= parseFloat(box.style.left) - torus.geometry.parameters.radiusTop &&
+      torus.position.x <= parseFloat(box.style.left) + parseFloat(box.style.width) + torus.geometry.parameters.radiusTop) {
       torus.hasScored = true;
       points++; // Increment the point count
+      pointCounter.innerText = `Points: ${points}`;
+    }
+
+    // Check if torus is out of the screen
+    if (torus.position.y < -3) {
+      scene.remove(torus);
+      toruses.splice(toruses.indexOf(torus), 1);
     }
   });
 
-  // Update the point counter text
-  pointCounter.innerText = `Points: ${points}`;
-
   renderer.render(scene, camera);
 }
+
 
 animate();
 </script>
