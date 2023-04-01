@@ -110,7 +110,6 @@ document.addEventListener('keydown', (event) => {
 });
 
 // Setup
-
 var scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 camera.position.z = 5;
@@ -157,15 +156,32 @@ function createTorus() {
   const torus = new THREE.Mesh(geometry, material);
   torus.position.x = Math.random() * 10 - 5; // Random X position between -5 and 5
   torus.position.y = 3; // Top of the window
+
+  // Calculate the direction vector from the torus to the camera
+  const direction = new THREE.Vector3();
+  camera.getWorldPosition(direction);
+  direction.sub(torus.position).normalize();
+
+  // Calculate the angle between the torus's normal vector and the direction vector
+  const normal = new THREE.Vector3(0, 1, 0); // The torus's normal vector points straight up
+  const angle = Math.acos(normal.dot(direction));
+
+  // Rotate the torus around its own axis to face the camera
+  const axis = new THREE.Vector3();
+  axis.crossVectors(normal, direction).normalize();
+  torus.quaternion.setFromAxisAngle(axis, angle);
+
   scene.add(torus);
   addSprinklesToTorus(torus, 50); // Add 50 sprinkles to the torus
   return torus;
 }
 
+
 const toruses = [];
 
 // Add a new torus every 5 seconds
 setInterval(() => {
+  if (toruses.length > 0) { return }
   const torus = createTorus();
   toruses.push(torus);
 }, 5000);
@@ -180,26 +196,39 @@ function animate() {
     torus.rotation.x += 0.01;
     torus.rotation.y += 0.01;
 
-    // Check if torus has passed through the box
-    if (!torus.hasScored && torus.position.x >= parseFloat(box.style.left) - torus.geometry.parameters.radiusTop &&
-      torus.position.x <= parseFloat(box.style.left) + parseFloat(box.style.width) + torus.geometry.parameters.radiusTop) {
+    const boxRect = box.getBoundingClientRect();
+    const torusPos = torus.position.clone();
+    torusPos.project(camera);
+
+    // Transform the normalized device coordinates to screen coordinates
+    const x = (torusPos.x + 1) / 2 * window.innerWidth;
+    const y = (-torusPos.y + 1) / 2 * window.innerHeight;
+
+    // Check if torus has intersected with the box and hasn't already scored a point
+    if (x >= boxRect.left && x <= boxRect.right && !torus.hasScored) {
       torus.hasScored = true;
       points++; // Increment the point count
-      pointCounter.innerText = `Points: ${points}`;
     }
+    // Debug logging for torus and box positions
+    console.log(`Torus position: (${x}, ${y})`);
+    console.log(`Box position: (${boxRect.left}, ${boxRect.top})`);
 
-    // Check if torus is out of the screen
+    // Remove the torus when it goes out of the window
     if (torus.position.y < -3) {
       scene.remove(torus);
       toruses.splice(toruses.indexOf(torus), 1);
     }
   });
 
+  // Update the point counter text
+  pointCounter.innerText = `Points: ${points}`;
+
   renderer.render(scene, camera);
 }
 
 
 animate();
+
 </script>
   </body>
 </html>
