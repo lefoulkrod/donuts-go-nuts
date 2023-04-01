@@ -11,7 +11,7 @@
       canvas {
         display: block;
       }
-      #banner-container {
+      .banner-container {
         position: fixed;
         top: 0;
         left: 0;
@@ -22,7 +22,7 @@
         align-items: center;
         z-index: 9999;
       }
-      #banner {
+      .banner {
         width: 100%;
         height: 20%;
         background-color: black;
@@ -60,13 +60,16 @@
     </style>
   </head>
   <body>
-    <div id="banner-container">
-      <div id="banner">Donuts Go Nuts</div>
+    <div class="banner-container" id="intro-banner">
+      <div class="banner">Donuts Go Nuts</div>
+    </div>
+    <div class="banner-container" id="winning-message" style="visibility: hidden;">
+      <div class="banner">Baker's Dozen!</div>
     </div>
     <script>
-      const banner = document.getElementById("banner");
+      const banner = document.getElementById("intro-banner");
       setTimeout(() => {
-        banner.style.opacity = "0";
+        banner.children[0].style.opacity = "0";
       }, 2000);
     </script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -88,27 +91,6 @@ document.body.appendChild(pointCounter);
 // Initialize the point count
 let points = 0;
 
-  // Create a 2D box at the bottom of the screen
-const box = document.createElement('div');
-box.style.width = '200px';
-box.style.height = '100px';
-box.style.backgroundColor = 'white';
-box.style.position = 'absolute';
-box.style.bottom = '10px';
-box.style.left = '50%';
-box.style.transform = 'translateX(-25%)';
-document.body.appendChild(box);
-
-// Move the box with the arrow keys
-const speed = 50;
-document.addEventListener('keydown', (event) => {
-  if (event.code === 'ArrowLeft') {
-    box.style.left = `${parseFloat(box.style.left) - speed}px`;
-  } else if (event.code === 'ArrowRight') {
-    box.style.left = `${parseFloat(box.style.left) + speed}px`;
-  }
-});
-
 // Setup
 var scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -125,6 +107,62 @@ scene.add(ambientLight);
 const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
 directionalLight.position.set(1, 1, 1);
 scene.add(directionalLight);
+
+// Create a 3D box at the bottom of the screen
+// Define the font and create the texture for the text
+const font = 'Arial';
+const textCanvas = document.createElement('canvas');
+const textCtx = textCanvas.getContext('2d');
+const textSize = 64;
+textCtx.font = `${textSize}px ${font}`;
+textCtx.textAlign = 'center';
+textCtx.textBaseline = 'middle';
+textCtx.fillStyle = 'white';
+textCtx.fillText('Donuts', textCanvas.width / 2, textCanvas.height / 2);
+const textTexture = new THREE.CanvasTexture(textCanvas);
+
+// Create the box geometry and material
+const boxWidth = 2.5;
+const boxHeight = 1.5;
+const boxDepth = 0.75;
+const boxGeometry = new THREE.BoxGeometry(boxWidth, boxHeight, boxDepth);
+const boxMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+
+// Create the mesh for the box and set its position and rotation
+const boxMesh = new THREE.Mesh(boxGeometry, boxMaterial);
+boxMesh.position.set(0, -3, -3);
+boxMesh.position.z = 0;
+const loader = new THREE.FontLoader();
+loader.load('https://threejs.org/examples/fonts/helvetiker_regular.typeface.json', function (font) {
+  const textGeometry = new THREE.TextGeometry('DONUTS', {
+    font: font,
+    size: .25,
+    height: 0.1,
+    curveSegments: 12,
+    bevelEnabled: true,
+    bevelThickness: 0.03,
+    bevelSize: 0.02,
+    bevelSegments: 5
+  });
+  const textMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 });
+  const textMesh = new THREE.Mesh(textGeometry, textMaterial);
+  textMesh.position.set(-.65, 0, .25);
+  boxMesh.add(textMesh);
+  // Add the box and text meshes to the scene
+  scene.add(boxMesh);
+  boxMesh.add(textMesh);
+});
+
+// Move the box with the arrow keys
+const speed = 1;
+document.addEventListener('keydown', (event) => {
+  const key = event.code;
+  if (key === 'ArrowLeft') {
+    boxMesh.position.x -= speed;
+  } else if (key === 'ArrowRight') {
+    boxMesh.position.x += speed;
+  }
+});
 
 // Helper function to create a sprinkle
 function createSprinkle() {
@@ -152,10 +190,11 @@ function addSprinklesToTorus(torus, numSprinkles) {
 // Update createTorus function
 function createTorus() {
   const geometry = new THREE.TorusGeometry(0.25, 0.1, 16, 100);
-  const material = new THREE.MeshPhongMaterial({ color: 0xFFC0CB }); // Pink color
+  const material = new THREE.MeshPhongMaterial({ color: 0xFFCCE5 }); // Pink color
   const torus = new THREE.Mesh(geometry, material);
   torus.position.x = Math.random() * 10 - 5; // Random X position between -5 and 5
   torus.position.y = 3; // Top of the window
+  torus.position.z=0;
 
   // Calculate the direction vector from the torus to the camera
   const direction = new THREE.Vector3();
@@ -172,7 +211,10 @@ function createTorus() {
   torus.quaternion.setFromAxisAngle(axis, angle);
 
   scene.add(torus);
-  addSprinklesToTorus(torus, 50); // Add 50 sprinkles to the torus
+  // Set a random speed for the torus
+  const speed = Math.random() * 0.05 + 0.05; // Random speed between 0.05 and 0.1
+  torus.userData.speed = speed;
+  //addSprinklesToTorus(torus, 50); // Add 50 sprinkles to the torus
   return torus;
 }
 
@@ -181,42 +223,45 @@ const toruses = [];
 
 // Add a new torus every 5 seconds
 setInterval(() => {
-  if (toruses.length > 0) { return }
+  if (toruses.length > 0 || points >= 13) { return }
   const torus = createTorus();
   toruses.push(torus);
 }, 5000);
 
+let prevTime = performance.now();
 // Animation loop
 function animate() {
   requestAnimationFrame(animate);
+  const time = performance.now();
+  const delta = (time - prevTime) / 15; // Convert milliseconds to seconds
+  prevTime = time;
 
+  
   // Update torus positions and check for point scoring
   toruses.forEach((torus) => {
-    torus.position.y -= 0.05;
+    torus.position.y -= torus.userData.speed * delta;
     torus.rotation.x += 0.01;
     torus.rotation.y += 0.01;
 
-    const boxRect = box.getBoundingClientRect();
-    const torusPos = torus.position.clone();
-    torusPos.project(camera);
+    const torusBox = new THREE.Box3().setFromObject(torus);
+    const boxBox = new THREE.Box3().setFromObject(boxMesh);
 
-    // Transform the normalized device coordinates to screen coordinates
-    const x = (torusPos.x + 1) / 2 * window.innerWidth;
-    const y = (-torusPos.y + 1) / 2 * window.innerHeight;
-
-    // Check if torus has intersected with the box and hasn't already scored a point
-    if (x >= boxRect.left && x <= boxRect.right && !torus.hasScored) {
+    // Check if torus has collided with the box and hasn't already scored a point
+    if (torusBox.intersectsBox(boxBox) && torus.position.y < boxMesh.position.y && !torus.hasScored) {
       torus.hasScored = true;
       points++; // Increment the point count
+      scene.remove(torus);
+      toruses.splice(toruses.indexOf(torus), 1);
     }
-    // Debug logging for torus and box positions
-    console.log(`Torus position: (${x}, ${y})`);
-    console.log(`Box position: (${boxRect.left}, ${boxRect.top})`);
 
     // Remove the torus when it goes out of the window
     if (torus.position.y < -3) {
       scene.remove(torus);
       toruses.splice(toruses.indexOf(torus), 1);
+    }
+
+    if (points >= 13) {
+      document.getElementById("winning-message").style.visibility = 'visible';
     }
   });
 
@@ -225,6 +270,8 @@ function animate() {
 
   renderer.render(scene, camera);
 }
+
+
 
 
 animate();
