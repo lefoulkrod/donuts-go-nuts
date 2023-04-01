@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Basic 3D Game</title>
+    <style>
+      body { margin: 0; }
+      canvas { display: block; }
+    </style>
+  </head>
+  <body>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
+
+<script>
+// Setup
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+camera.position.z = 5;
+
+const renderer = new THREE.WebGLRenderer();
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+
+// Lighting
+const ambientLight = new THREE.AmbientLight(0x404040);
+scene.add(ambientLight);
+
+const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
+directionalLight.position.set(1, 1, 1);
+scene.add(directionalLight);
+
+// Helper function to create a sprinkle
+function createSprinkle() {
+  const geometry = new THREE.CylinderGeometry(0.01, 0.01, 0.1, 8);
+  const material = new THREE.MeshPhongMaterial({ color: Math.random() * 0xffffff });
+  const sprinkle = new THREE.Mesh(geometry, material);
+  return sprinkle;
+}
+
+// Helper function to add sprinkles to a torus
+function addSprinklesToTorus(torus, numSprinkles) {
+  for (let i = 0; i < numSprinkles; i++) {
+    const sprinkle = createSprinkle();
+    const angle = Math.random() * 2 * Math.PI;
+    const radius = 0.25 + 0.1 * Math.random();
+    const yOffset = Math.random() * 0.1 - 0.05;
+    sprinkle.position.x = radius * Math.cos(angle);
+    sprinkle.position.y = yOffset;
+    sprinkle.position.z = radius * Math.sin(angle);
+    sprinkle.lookAt(torus.position);
+    torus.add(sprinkle);
+  }
+}
+
+// Update createTorus function
+function createTorus() {
+  const geometry = new THREE.TorusGeometry(0.25, 0.1, 16, 100);
+  const material = new THREE.MeshPhongMaterial({ color: 0xFFC0CB }); // Pink color
+  const torus = new THREE.Mesh(geometry, material);
+  torus.position.x = Math.random() * 10 - 5; // Random X position between -5 and 5
+  torus.position.y = 3; // Top of the window
+  scene.add(torus);
+  addSprinklesToTorus(torus, 50); // Add 50 sprinkles to the torus
+  return torus;
+}
+
+const toruses = [];
+
+// Add a new torus every 5 seconds
+setInterval(() => {
+  toruses.push(createTorus());
+}, 5000);
+
+// Animation loop
+function animate() {
+  requestAnimationFrame(animate);
+
+  // Update torus positions
+  toruses.forEach((torus) => {
+    torus.position.y -= 0.05;
+    torus.rotation.x += 0.01;
+    torus.rotation.y += 0.01;
+  });
+
+  renderer.render(scene, camera);
+}
+
+animate();
+
+
+</script>
+  </body>
+</html>
+
